@@ -1,0 +1,41 @@
+name: Restock Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # every 5 minutes (GitHub cron is best-effort)
+  workflow_dispatch: {}       # allow manual runs from the Actions tab
+
+# Avoid overlapping runs if one takes longer than 5 minutes
+concurrency:
+  group: restock-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Persist the "already posted today" state across runs. The runner's disk
+      # is ephemeral, so without this every run starts fresh and would re-alert
+      # the same in-stock item every 5 minutes.
+      - uses: actions/cache@v4
+        with:
+          path: data
+          key: posted-state-${{ github.run_id }}
+          restore-keys: |
+            posted-state-
+
+      - run: npm install && npm run install-browsers
+
+      - run: npm start
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}

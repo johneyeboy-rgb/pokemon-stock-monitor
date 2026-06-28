@@ -1,0 +1,16 @@
+# Secrets — NEVER commit these
+.env
+
+# Dependencies
+node_modules/
+
+# Runtime state (auto-created)
+data/
+
+# Logs / OS cruft
+*.log
+.DS_Store
+Thumbs.db
+
+# Local Claude Code settings
+.claude/settings.local.json

@@ -1,0 +1,34 @@
+name: Daily Promo
+
+on:
+  schedule:
+    - cron: '0 16 * * *'   # once a day at 16:00 UTC
+  workflow_dispatch: {}      # allow manual runs from the Actions tab
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Carry the "promo posted today" marker across runs so a retry can't double-post.
+      - uses: actions/cache@v4
+        with:
+          path: data
+          key: promo-state-${{ github.run_id }}
+          restore-keys: |
+            promo-state-
+
+      # No Playwright/Chromium needed — this job only posts to X.
+      - run: npm install
+
+      - run: npm run promo
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
