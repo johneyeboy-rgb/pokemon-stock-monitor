@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       # Persist the "already posted today" state across runs. The runner's disk
       # is ephemeral, so without this every run starts fresh and would re-alert
@@ -30,7 +31,15 @@ jobs:
           restore-keys: |
             posted-state-
 
-      - run: npm install && npm run install-browsers
+      # Cache the Playwright Chromium download (~180 MB) so runs reuse it instead
+      # of re-fetching every 5 minutes.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - run: npm ci
+      - run: npx playwright install chromium
 
       - run: npm start
         env:
