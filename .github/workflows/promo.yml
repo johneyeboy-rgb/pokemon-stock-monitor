@@ -9,15 +9,15 @@ jobs:
   post:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       # Carry the "promo posted today" marker across runs so a retry can't double-post.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: data
           key: promo-state-${{ github.run_id }}
