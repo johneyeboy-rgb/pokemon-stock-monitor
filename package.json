@@ -14,6 +14,8 @@
     "@anthropic-ai/sdk": "^0.106.0",
     "dotenv": "^16.4.5",
     "playwright": "^1.44.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "twitter-api-v2": "^1.17.2"
   }
 }

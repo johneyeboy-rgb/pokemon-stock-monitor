@@ -25,15 +25,17 @@ function rw() {
 /**
  * Post a restock alert tweet
  */
-export async function postRestockAlert({ product, retailer, url }) {
+export async function postRestockAlert({ product, retailer, url, price }) {
   const retailerLabel = {
     pokemonCenter: 'Pokemon Center',
     target: 'Target',
     bestBuy: 'Best Buy',
     walmart: 'Walmart',
+    amazon: 'Amazon',
   }[retailer] ?? retailer;
 
-  const head = `🚨 RESTOCK ALERT 🚨\n${product} is IN STOCK at ${retailerLabel}!\n\n🔗 ${url}`;
+  const priceStr = price != null ? ` for $${price}` : '';
+  const head = `🚨 RESTOCK ALERT 🚨\n${product} is IN STOCK at ${retailerLabel}${priceStr}!\n\n🔗 ${url}`;
   const cta = `\n\n🔔 Follow for instant restock alerts`;
   const tags = `\n\n#PokemonTCG #Restock #PokemonCards`;
 

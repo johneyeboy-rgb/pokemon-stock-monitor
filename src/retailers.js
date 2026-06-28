@@ -23,8 +23,9 @@ export const SITES = {
   // ─── Pokemon Center ────────────────────────────────────────────────────────
   // Cloudflare protected — needs realistic UA + headers.
   pokemonCenter: {
-    // DISABLED: Cloudflare returns HTTP 403 to headless Chromium. Needs a stealth
-    // plugin, residential proxies, or a scraping API. Re-enable once you have one.
+    // DISABLED: Cloudflare returns HTTP 403 even with the stealth plugin — it
+    // blocks at the edge before the page renders. Realistically needs a scraping
+    // API / residential-proxy unblocker. Re-enable once you have one.
     enabled: false,
     baseUrl: 'https://www.pokemoncenter.com',
     delayMs: 3000,
@@ -66,6 +67,7 @@ export const SITES = {
     productCardSelector: '[data-test="product-details"]',
     titleSelector: '[data-test="@web/ProductCard/title"]',
     linkSelector: 'a[data-test="@web/ProductCard/title"], a[href*="/p/"]',
+    priceSelector: '[data-test="current-price"]',
     cardSelectors: {
       inStock: [
         'button[data-test="shipItButton"]:not([disabled])',
@@ -115,9 +117,10 @@ export const SITES = {
   // ─── Walmart ───────────────────────────────────────────────────────────────
   // Most aggressive bot protection. Higher delay + AI fallback most likely here.
   walmart: {
-    // DISABLED: serves a "Robot or human?" bot-challenge page to headless
-    // Chromium. Needs heavier anti-bot tooling. Re-enable once you have one.
-    enabled: false,
+    // Re-enabled with playwright-extra + stealth, which clears the PerimeterX
+    // "Robot or human?" challenge from a residential IP. May re-block from
+    // datacenter IPs (e.g. GitHub Actions) — watch the CI runs.
+    enabled: true,
     baseUrl: 'https://www.walmart.com',
     delayMs: 5000, // Walmart rate-limits aggressively — keep this high
     userAgent:
@@ -135,14 +138,44 @@ export const SITES = {
     titleSelector: 'a[link-identifier="productName"], span[data-automation-id="product-title"]',
     linkSelector: 'a[link-identifier="productName"]',
     cardSelectors: {
-      inStock: [
-        '[data-automation-id="add-to-cart-btn"]',
-        '[data-automation-id="addToCartButton"]',
-      ],
+      // Walmart search tiles show a generic CTA on every result, so a positive
+      // selector over-matches (everything reads "in stock"). Leave inStock empty
+      // and let the AI fallback judge from the card text; only trust an explicit
+      // out-of-stock marker.
+      inStock: [],
       outOfStock: [
         '[data-automation-id="out-of-stock"]',
         '.out-of-stock-message',
       ],
+    },
+  },
+
+  // ─── Amazon ──────────────────────────────────────────────────────────────
+  // Heavy bot detection; loads via stealth from a residential IP (datacenter /
+  // CI IPs may hit a CAPTCHA — that just yields 0 cards, never a false alert).
+  // Search tiles show a price when available, so detection leans on the AI
+  // fallback. NOTE: Amazon is marketplace-heavy, so items are often "in stock"
+  // via third-party sellers at inflated prices — consider a price filter.
+  amazon: {
+    enabled: true,
+    baseUrl: 'https://www.amazon.com',
+    delayMs: 4000,
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+    buildSearchUrl: (product) =>
+      `https://www.amazon.com/s?k=${encodeURIComponent(product)}`,
+    waitSelector: '[data-component-type="s-search-result"]',
+    productCardSelector: '[data-component-type="s-search-result"]',
+    titleSelector: 'h2 a span, h2 span',
+    linkSelector: 'h2 a, a.a-link-normal.s-no-outline',
+    priceSelector: '.a-price .a-offscreen',
+    cardSelectors: {
+      // No reliable positive add-to-cart on search tiles; the AI fallback judges
+      // from card text (price shown = available; "Currently unavailable" = not).
+      inStock: [],
+      outOfStock: [],
     },
   },
 };

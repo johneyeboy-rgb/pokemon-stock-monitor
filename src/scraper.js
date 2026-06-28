@@ -8,16 +8,22 @@
  *   3. Look for in/out-of-stock indicators *inside that card*.
  *   4. If the markup is inconclusive, fall back to Claude on the card's text only.
  *
- * NOTE: this applies basic, dependency-free anti-detection hardening (launch
- * flags, realistic context, navigator.webdriver masking). That helps with naive
- * checks but will NOT reliably beat Cloudflare (Pokemon Center) or Walmart's
- * fingerprinting. If you still get walls/CAPTCHAs, escalate to playwright-extra +
- * the stealth plugin, residential proxies, or a scraping API.
+ * Steps 1–3 run in a single in-page pass (scanForProduct) so we never hold element
+ * handles across navigations — important because the stealth plugin and SPA
+ * re-renders can otherwise invalidate them.
+ *
+ * NOTE: uses playwright-extra + the stealth plugin, which clears Walmart's
+ * PerimeterX challenge from a residential IP but does NOT beat Pokemon Center's
+ * Cloudflare edge block (still 403). Datacenter IPs (e.g. GitHub Actions) may be
+ * blocked harder — for reliable Walmart/PC in CI, use a scraping API.
  */
 
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import Anthropic from '@anthropic-ai/sdk';
 import * as retailers from './retailers.js';
+
+chromium.use(StealthPlugin());
 
 // Lazily construct the Anthropic client so a missing/placeholder API key doesn't
 // crash selector-only / dry runs — it's only needed when the AI fallback fires.
@@ -73,7 +79,6 @@ async function checkRetailer(browser, name, retailer, product) {
     viewport: { width: 1280, height: 800 },
     deviceScaleFactor: 1,
   });
-  await context.addInitScript(STEALTH_INIT);
 
   try {
     const page = await context.newPage();
@@ -101,76 +106,107 @@ async function checkRetailer(browser, name, retailer, product) {
       console.log(`   [diag] status=${response?.status() ?? '?'} cards=${cards} title="${title.slice(0, 70)}"`);
     }
 
-    // Find the result card that actually matches the product we're watching.
-    const card = await findMatchingCard(page, retailer, product);
-    if (!card) {
+    // Match the product, detect stock, and grab the link — all in one in-page pass.
+    const found = await page.evaluate(scanForProduct, {
+      cardSel: retailer.productCardSelector,
+      titleSel: retailer.titleSelector ?? null,
+      linkSel: retailer.linkSelector ?? null,
+      priceSel: retailer.priceSelector ?? null,
+      inSel: retailer.cardSelectors?.inStock ?? [],
+      outSel: retailer.cardSelectors?.outOfStock ?? [],
+      product,
+      threshold: MATCH_THRESHOLD,
+      stopwords: [...STOPWORDS],
+      baseUrl: retailer.baseUrl,
+    }).catch(() => null);
+
+    if (!found || !found.matched) {
       // Product not present in the search results → treat as not in stock.
-      return { retailer: name, product, inStock: false, url };
+      return { retailer: name, product, inStock: false, price: null, url };
     }
 
-    // Fast, card-scoped CSS detection first
-    let inStock = await detectBySelectors(card, retailer.cardSelectors);
-
-    // Fall back to Claude on the matched card's text if markup was inconclusive
+    // Fall back to Claude on the matched card's text if the markup was inconclusive.
+    let inStock = found.inStock; // true | false | null
     if (inStock === null) {
-      const cardText = (await card.innerText().catch(() => '')).slice(0, 2000);
-      inStock = await detectByAI(cardText, product, name);
+      inStock = await detectByAI(found.text, product, name);
     }
 
-    const stockUrl = inStock ? (await extractCardUrl(card, retailer)) ?? url : url;
-    return { retailer: name, product, inStock, url: stockUrl };
+    const stockUrl = inStock ? (found.href ?? url) : url;
+    return { retailer: name, product, inStock, price: found.price ?? null, url: stockUrl };
   } finally {
     await context.close();
   }
 }
 
 /**
- * Scan the search-result cards and return the ElementHandle whose title best
- * matches the watched product. Returns null if nothing clears the threshold.
+ * Runs IN THE PAGE (serialized by page.evaluate — no access to Node scope).
+ * Picks the best title-matched card, then reads in/out-of-stock signals and the
+ * product link from it, returning plain serializable data.
  */
-async function findMatchingCard(page, retailer, product) {
-  if (!retailer.productCardSelector) return null;
+function scanForProduct({ cardSel, titleSel, linkSel, priceSel, inSel, outSel, product, threshold, stopwords, baseUrl }) {
+  const stop = new Set(stopwords);
+  const tokenize = s => (s || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
 
-  const cards = await page.$$(retailer.productCardSelector);
+  const want = tokenize(product).filter(t => t.length > 1 && !stop.has(t));
+  const score = title => {
+    if (!want.length) return 0;
+    const have = new Set(tokenize(title));
+    let hits = 0;
+    for (const t of want) if (have.has(t)) hits++;
+    return hits / want.length;
+  };
+
+  const cards = cardSel ? Array.from(document.querySelectorAll(cardSel)) : [];
   let best = null;
   let bestScore = 0;
-
-  for (const card of cards) {
-    const titleEl = retailer.titleSelector ? await card.$(retailer.titleSelector) : null;
-    const title = await (titleEl ?? card).innerText().catch(() => '');
-    const score = matchScore(product, title);
-    if (score > bestScore) {
-      bestScore = score;
-      best = card;
-    }
+  for (const c of cards) {
+    const titleEl = titleSel ? c.querySelector(titleSel) : null;
+    const title = ((titleEl || c).textContent || '').trim();
+    const s = score(title);
+    if (s > bestScore) { bestScore = s; best = c; }
   }
+  if (!best || bestScore < threshold) return { matched: false };
 
-  return bestScore >= MATCH_THRESHOLD ? best : null;
-}
-
-/**
- * Card-scoped CSS detection — fast, no AI cost.
- * Returns true / false / null (null = inconclusive).
- */
-async function detectBySelectors(card, selectors) {
-  if (!selectors) return null;
-
-  // Explicit "add to cart" / "in stock" indicators inside the card
-  for (const sel of selectors.inStock ?? []) {
-    const el = await card.$(sel);
+  // In/out-of-stock indicators inside the matched card.
+  let inStock = null;
+  for (const sel of inSel) {
+    const el = best.querySelector(sel);
     if (el) {
-      const text = (await el.innerText().catch(() => '')).toLowerCase();
-      if (!/unavailable|out of stock|sold out/i.test(text)) return true;
+      const t = (el.textContent || '').toLowerCase();
+      if (!/unavailable|out of stock|sold out/.test(t)) { inStock = true; break; }
+    }
+  }
+  if (inStock === null) {
+    for (const sel of outSel) {
+      if (best.querySelector(sel)) { inStock = false; break; }
     }
   }
 
-  // Explicit "out of stock" indicators inside the card
-  for (const sel of selectors.outOfStock ?? []) {
-    const el = await card.$(sel);
-    if (el) return false;
+  // Product link.
+  let href = null;
+  if (linkSel) {
+    const a = best.querySelector(linkSel);
+    if (a) href = a.getAttribute('href');
+  }
+  if (href) {
+    href = href.split('#')[0];
+    if (!/^https?:/.test(href)) href = baseUrl + href;
   }
 
-  return null; // inconclusive
+  // Price — prefer a dedicated element, else the first $-amount in the card text.
+  let priceText = '';
+  if (priceSel) { const pe = best.querySelector(priceSel); if (pe) priceText = pe.textContent || ''; }
+  if (!priceText) priceText = best.innerText || best.textContent || '';
+  const pm = priceText.match(/\$\s?([\d,]+(?:\.\d{1,2})?)/);
+  const price = pm ? parseFloat(pm[1].replace(/,/g, '')) : null;
+
+  const text = (best.innerText || best.textContent || '').slice(0, 2000);
+  return { matched: true, score: bestScore, inStock, href, text, price };
 }
 
 /**
@@ -178,7 +214,7 @@ async function detectBySelectors(card, selectors) {
  * Operates on the matched card's text only (not the whole page).
  */
 async function detectByAI(cardText, product, retailerName) {
-  if (!cardText.trim()) return false;
+  if (!cardText || !cardText.trim()) return false;
 
   const msg = await anthropic().messages.create({
     model: 'claude-sonnet-4-6',
@@ -198,19 +234,6 @@ async function detectByAI(cardText, product, retailerName) {
   return answer === 'INSTOCK';
 }
 
-/**
- * Extract the product URL from the matched card.
- */
-async function extractCardUrl(card, retailer) {
-  if (!retailer.linkSelector) return null;
-  const el = await card.$(retailer.linkSelector);
-  if (!el) return null;
-  let href = await el.getAttribute('href');
-  if (!href) return null;
-  href = href.split('#')[0]; // drop tracking fragments like #lnk=sametab
-  return href.startsWith('http') ? href : retailer.baseUrl + href;
-}
-
 // ── Product-name matching ────────────────────────────────────────────────────
 
 // Fraction of the product's significant tokens a card title must contain to count
@@ -218,29 +241,6 @@ async function extractCardUrl(card, retailer) {
 // "151 Booster Bundle" should NOT match a "151 Booster Pack" listing (0.75).
 const MATCH_THRESHOLD = 0.8;
 const STOPWORDS = new Set(['the', 'a', 'an', 'of', 'and', 'for', 'with', 'to']);
-
-function tokenize(s) {
-  return (s || '')
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
-/**
- * Fraction of the product's significant tokens that appear in the card title.
- * 1.0 = every meaningful word matched; 0 = no overlap.
- */
-function matchScore(product, cardTitle) {
-  const want = tokenize(product).filter(t => t.length > 1 && !STOPWORDS.has(t));
-  if (want.length === 0) return 0;
-
-  const have = new Set(tokenize(cardTitle));
-  let hits = 0;
-  for (const t of want) if (have.has(t)) hits++;
-  return hits / want.length;
-}
 
 const DEFAULT_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
@@ -254,16 +254,5 @@ const LAUNCH_ARGS = [
   '--disable-dev-shm-usage',
   '--no-sandbox',
 ];
-
-// Runs in the page before any site script. Masks the cheap "is this a bot?"
-// tells. Kept UA-consistent: window.chrome is only added for Chrome UAs.
-const STEALTH_INIT = () => {
-  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-  Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-  Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-  if (/Chrome/.test(navigator.userAgent) && !window.chrome) {
-    window.chrome = { runtime: {} };
-  }
-};
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
