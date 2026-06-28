@@ -47,18 +47,21 @@ jobs:
 
 ## Daily follower-growth posts
 
-Separate from restock alerts, `npm run promo` posts one piece of engagement
-content per day (`src/content.js`) to keep the account active and grow
-followers. It's safe to run more than once — a state guard ensures only one post
-per calendar day.
+Separate from restock alerts, `npm run promo` posts follower-growth content — a
+mix of text posts and native polls — across a few slots per day (`src/content.js`)
+to keep the account active and grow followers. The slot is derived from the
+current UTC hour (`SLOT_HOURS`), and a state guard ensures one post per slot per
+day, so manual re-runs are safe.
 
-Run it on its own **daily** schedule (not the 5-minute restock cron):
+Run it on a multi-slot schedule (not the 5-minute restock cron):
 
 ```yaml
 # .github/workflows/promo.yml
 on:
   schedule:
-    - cron: '0 16 * * *'   # once a day, 16:00 UTC
+    - cron: '0 15 * * *'   # content slots (UTC) — match SLOT_HOURS
+    - cron: '0 19 * * *'
+    - cron: '0 23 * * *'
 jobs:
   post:
     runs-on: ubuntu-latest
@@ -78,8 +81,9 @@ jobs:
 Note: the promo job doesn't need Playwright/Chromium — it only posts to X, so
 `npm run install-browsers` is omitted here.
 
-**Edit the content:** add or change posts in the `DAILY_CONTENT` array in
-`src/content.js`. The pool cycles fully before any post repeats.
+**Edit the content:** add or change items in the `POSTS` array in
+`src/content.js` (text posts or polls). The pool cycles fully before anything
+repeats.
 
 ## Project structure
 

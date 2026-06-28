@@ -39,25 +39,26 @@ export function markAsPosted(retailer, product) {
   save(state);
 }
 
-// Reserved key for the daily follower-growth post (won't collide with
-// "retailer::product" alert keys).
+// Reserved key prefix for follower-growth posts (won't collide with
+// "retailer::product" alert keys). One entry per content slot per day.
 const PROMO_KEY = '__promo__';
 
 /**
- * Check if we've already posted today's follower-growth content
+ * Check if we've already posted this content slot today
  */
-export function alreadyPostedPromoToday() {
+export function alreadyPostedPromoSlot(slotKey) {
   const state = load();
-  if (!state[PROMO_KEY]) return false;
-  return new Date(state[PROMO_KEY]).toDateString() === new Date().toDateString();
+  const key = `${PROMO_KEY}:${slotKey}`;
+  if (!state[key]) return false;
+  return new Date(state[key]).toDateString() === new Date().toDateString();
 }
 
 /**
- * Mark today's follower-growth content as posted (now)
+ * Mark this content slot as posted (now)
  */
-export function markPromoPosted() {
+export function markPromoSlot(slotKey) {
   const state = load();
-  state[PROMO_KEY] = new Date().toISOString();
+  state[`${PROMO_KEY}:${slotKey}`] = new Date().toISOString();
   save(state);
 }
 
