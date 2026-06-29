@@ -47,6 +47,24 @@ questions, pulls/openings, drop-window chatter, hot takes.
 - Prefer posts that are recent and getting engagement (a reply on a popular post
   gets seen by more people — that's the whole point).
 
+### 2a. RECENCY FILTER (mandatory — replies on stale posts are worthless)
+Web search indexes *popular/older* tweets, so raw results skew weeks-stale. Before
+showing ANY web-discovered post, compute its real age from the X status ID
+(snowflake timestamp) and **drop anything older than 7 days**:
+```
+node -e 'const e=1288834974657n;const id="<STATUS_ID>";const ms=Number((BigInt(id)>>22n)+e);console.log(new Date(ms).toISOString().slice(0,10), Math.round((Date.now()-ms)/86400000)+"d ago")'
+```
+(The status ID is the trailing number in `x.com/<user>/status/<ID>`.) Always show
+each post's age in the table. If everything you found is older than 7 days, **do
+not present stale posts** — instead tell the user web search only returned old
+tweets and steer them to the two reliable fresh sources:
+- **Claude-in-Chrome** (`mcp__Claude_in_Chrome__*`): if their browser is logged
+  into X, drive it to a search's **"Latest"** tab (or a curated List) to read
+  genuinely live posts with real links. This is the preferred fresh-discovery path.
+- **Paste-URL mode**: ask them to grab links from X's "Latest" tab / a TCG List.
+This recency check applies to web-search finds; user-pasted links are trusted as-is
+(but still note their age if useful).
+
 ### 3. Draft a reply for each (the craft)
 This is where the value is. Each draft must:
 - **Sound genuinely human** — like a real collector talking, not a brand. Casual,
