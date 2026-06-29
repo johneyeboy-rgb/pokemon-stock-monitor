@@ -3,9 +3,11 @@ name: Daily Promo
 on:
   schedule:
     # Content slots (UTC) — keep in sync with SLOT_HOURS in src/content.js
-    - cron: '0 15 * * *'
-    - cron: '0 19 * * *'
+    - cron: '0 14 * * *'
+    - cron: '0 17 * * *'
+    - cron: '0 20 * * *'
     - cron: '0 23 * * *'
+    - cron: '0 1 * * *'
   workflow_dispatch: {}      # allow manual runs from the Actions tab
 
 jobs:

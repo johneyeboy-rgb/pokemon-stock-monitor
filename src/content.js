@@ -15,9 +15,10 @@ import { readFileSync, existsSync } from 'fs';
 // the pipeline falls back to the evergreen POSTS pool below.
 const QUEUE_FILE = './content/queue.json';
 
-// UTC hours the content jobs fire at. KEEP IN SYNC with the cron entries in
-// .github/workflows/promo.yml.
-export const SLOT_HOURS = [15, 19, 23];
+// UTC hours the content jobs fire at (≈10am, 1pm, 4pm, 7pm, 9pm ET — spread
+// across US active hours, evening-weighted). KEEP IN SYNC with the cron entries
+// in .github/workflows/promo.yml.
+export const SLOT_HOURS = [14, 17, 20, 23, 1];
 
 // Each item is either:
 //   { kind: 'text', text }

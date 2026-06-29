@@ -82,6 +82,46 @@ export function markQueueItem(id) {
   save(state);
 }
 
+// Reserved key for the daily restock recap (once per UTC day).
+const RECAP_KEY = '__recap__';
+
+/**
+ * Has today's restock recap already been posted?
+ */
+export function alreadyPostedRecapToday() {
+  const state = load();
+  if (!state[RECAP_KEY]) return false;
+  return new Date(state[RECAP_KEY]).toDateString() === new Date().toDateString();
+}
+
+/**
+ * Mark today's restock recap as posted (now).
+ */
+export function markRecapPosted() {
+  const state = load();
+  state[RECAP_KEY] = new Date().toISOString();
+  save(state);
+}
+
+/**
+ * Restock alerts (retailer::product keys) posted within the last `sinceMs`.
+ * @returns {{retailer:string, product:string, at:string}[]} newest first
+ */
+export function recentRestocks(sinceMs = 24 * 60 * 60 * 1000) {
+  const state = load();
+  const cutoff = Date.now() - sinceMs;
+  const out = [];
+  for (const [key, val] of Object.entries(state)) {
+    if (!key.includes('::')) continue; // skip __promo__ / __queue__ / __recap__ markers
+    const t = new Date(val).getTime();
+    if (Number.isFinite(t) && t >= cutoff) {
+      const [retailer, product] = key.split('::');
+      out.push({ retailer, product, at: val });
+    }
+  }
+  return out.sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
 /**
  * Clear all state (useful for testing)
  */

@@ -1,0 +1,37 @@
+name: Daily Recap
+
+on:
+  schedule:
+    - cron: '30 23 * * *'   # 23:30 UTC ≈ 6:30pm ET — after the US restock window
+  workflow_dispatch: {}
+
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # READ-ONLY restore of the monitor's state so the recap can see the day's
+      # restocks. We restore but never save — the recap must not clobber the
+      # monitor's posted-state cache.
+      - uses: actions/cache/restore@v5
+        with:
+          path: data
+          key: posted-state-${{ github.run_id }}
+          restore-keys: |
+            posted-state-
+
+      # No Playwright/Chromium needed — this job only reads state and posts to X.
+      - run: npm ci
+
+      - run: npm run recap
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}

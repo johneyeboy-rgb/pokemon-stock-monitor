@@ -59,9 +59,11 @@ Run it on a multi-slot schedule (not the 5-minute restock cron):
 # .github/workflows/promo.yml
 on:
   schedule:
-    - cron: '0 15 * * *'   # content slots (UTC) — match SLOT_HOURS
-    - cron: '0 19 * * *'
+    - cron: '0 14 * * *'   # content slots (UTC) — match SLOT_HOURS
+    - cron: '0 17 * * *'
+    - cron: '0 20 * * *'
     - cron: '0 23 * * *'
+    - cron: '0 1 * * *'
 jobs:
   post:
     runs-on: ubuntu-latest
