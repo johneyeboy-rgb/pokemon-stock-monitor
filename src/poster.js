@@ -35,18 +35,25 @@ export async function postRestockAlert({ product, retailer, url, price }) {
     gameStop: 'GameStop',
   }[retailer] ?? retailer;
 
-  const priceStr = price != null ? ` for $${price}` : '';
-  const head = `🚨 RESTOCK ALERT 🚨\n${product} is IN STOCK at ${retailerLabel}${priceStr}!\n\n🔗 ${url}`;
-  const cta = `\n\n🔔 Follow for instant restock alerts`;
+  // Restock alerts only ever fire at ≤ MSRP × 1.4 (see the price filter), so when
+  // we have a price we can honestly flag it as a real retail deal — that "deal"
+  // framing + urgency is what gets a post reshared (the main reach lever).
+  const priceStr = price != null ? ` — $${price}` : '';
+  const line1 = `🚨 RESTOCK ALERT 🚨\n${product} is IN STOCK at ${retailerLabel}${priceStr}!`;
+  const value = price != null ? `\n✅ At retail — not scalper prices` : '';
+  const link = `\n\n🔗 ${url}`;
+  const cta = `\n\n🔔 Follow for instant alerts — these sell out fast`;
   const tags = `\n\n#PokemonTCG #Restock #PokemonCards`;
 
-  // X counts every URL as 23 chars regardless of length. Add the CTA + tags only
-  // if the whole thing still fits under 280, so long product names never 400.
+  // X counts every URL as 23 chars. Keep the highest-value parts that fit ≤ 280,
+  // dropping tags → cta → value in that order; (line1 + link) is the floor.
   const len = s => s.length - url.length + 23;
-  let tweet = head;
-  if (len(head + cta + tags) <= 280) tweet = head + cta + tags;
-  else if (len(head + tags) <= 280) tweet = head + tags;
-  else if (len(head + cta) <= 280) tweet = head + cta;
+  const tweet = [
+    line1 + value + link + cta + tags,
+    line1 + value + link + cta,
+    line1 + value + link,
+    line1 + link,
+  ].find(t => len(t) <= 280) ?? (line1 + link);
 
   if (DRY_RUN) {
     console.log(`[DRY RUN] Would post restock tweet:\n${tweet}\n`);
