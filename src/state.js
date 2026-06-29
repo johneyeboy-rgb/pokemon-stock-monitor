@@ -62,6 +62,26 @@ export function markPromoSlot(slotKey) {
   save(state);
 }
 
+// Agent-queued items post at most once, ever (not daily) — keyed by item id.
+const QUEUE_PREFIX = '__queue__';
+
+/**
+ * Has this queued content item already been posted?
+ */
+export function alreadyPostedQueueItem(id) {
+  const state = load();
+  return !!state[`${QUEUE_PREFIX}:${id}`];
+}
+
+/**
+ * Mark a queued content item as posted (now).
+ */
+export function markQueueItem(id) {
+  const state = load();
+  state[`${QUEUE_PREFIX}:${id}`] = new Date().toISOString();
+  save(state);
+}
+
 /**
  * Clear all state (useful for testing)
  */

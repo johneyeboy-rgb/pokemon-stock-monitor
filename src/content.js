@@ -9,6 +9,12 @@
  * ≤ 25 characters (X's limits).
  */
 
+import { readFileSync, existsSync } from 'fs';
+
+// Agent-written content queue (see content/queue.json). Optional — when empty,
+// the pipeline falls back to the evergreen POSTS pool below.
+const QUEUE_FILE = './content/queue.json';
+
 // UTC hours the content jobs fire at. KEEP IN SYNC with the cron entries in
 // .github/workflows/promo.yml.
 export const SLOT_HOURS = [15, 19, 23];
@@ -53,4 +59,36 @@ export function pickPost(date = new Date(), slotIndex = 0, slotCount = SLOT_HOUR
   const dayIndex = Math.floor(date.getTime() / 86_400_000); // whole days since epoch
   const i = (dayIndex * slotCount + slotIndex) % POSTS.length;
   return POSTS[i];
+}
+
+/**
+ * Load the agent-written content queue (array). Returns [] if missing/invalid.
+ */
+export function loadQueue() {
+  try {
+    if (!existsSync(QUEUE_FILE)) return [];
+    const arr = JSON.parse(readFileSync(QUEUE_FILE, 'utf8'));
+    return Array.isArray(arr) ? arr : [];
+  } catch (err) {
+    console.error('[content] Could not read queue.json:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Pick the next eligible queued post, or null if none.
+ * Eligible = has id + text, not already posted, postAfter reached, not expired.
+ * Items are considered in file order, so order them by priority.
+ * @param {Date} now
+ * @param {(id: string) => boolean} isPosted
+ */
+export function pickQueuedPost(now = new Date(), isPosted = () => false) {
+  for (const item of loadQueue()) {
+    if (!item || !item.id || !item.text) continue;
+    if (isPosted(item.id)) continue;
+    if (item.postAfter && new Date(item.postAfter) > now) continue;
+    if (item.expires && new Date(item.expires) <= now) continue;
+    return item;
+  }
+  return null;
 }

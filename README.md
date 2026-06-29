@@ -85,6 +85,12 @@ Note: the promo job doesn't need Playwright/Chromium — it only posts to X, so
 `src/content.js` (text posts or polls). The pool cycles fully before anything
 repeats.
 
+**Agent-written queue:** `content/queue.json` holds timely, research-based posts
+(restock reminders, Pokémon news, drop-window tips) — typically generated and
+reviewed weekly, then committed. The pipeline posts queued items first (one per
+slot, each once, honoring optional `postAfter`/`expires` dates) and falls back to
+the evergreen pool when the queue is empty. See `content/README.md` for the schema.
+
 ## Project structure
 
 ```

@@ -14,9 +14,13 @@
 
 import 'dotenv/config';
 import { mkdirSync } from 'fs';
-import { pickPost, SLOT_HOURS } from './content.js';
-import { alreadyPostedPromoSlot, markPromoSlot } from './state.js';
+import { pickPost, pickQueuedPost, SLOT_HOURS } from './content.js';
+import { alreadyPostedPromoSlot, markPromoSlot, alreadyPostedQueueItem, markQueueItem } from './state.js';
 import { postPromoTweet, postPoll } from './poster.js';
+
+// When DRY_RUN is set, nothing posts and we don't persist state — so a dry test
+// can't suppress a real slot or consume a queued item.
+const DRY_RUN = !!process.env.DRY_RUN;
 
 // Map the current UTC hour to a content slot. On an exact cron hit it matches a
 // SLOT_HOURS entry; on a manual run it falls back to the nearest slot.
@@ -46,17 +50,19 @@ async function run() {
     return;
   }
 
-  const post = pickPost(new Date(), slot, SLOT_HOURS.length);
+  // Prefer an agent-queued post; fall back to the evergreen pool.
+  const queued = pickQueuedPost(new Date(), alreadyPostedQueueItem);
+  const post = queued ?? pickPost(new Date(), slot, SLOT_HOURS.length);
+  const source = queued ? `queued "${queued.id}"` : 'evergreen';
 
-  if (post.kind === 'poll') {
-    console.log(`[Promo] Posting poll (slot ${slot}): ${post.text}`);
-    await postPoll(post.text, post.options);
-  } else {
-    console.log(`[Promo] Posting (slot ${slot}): ${post.text}`);
-    await postPromoTweet(post.text);
-  }
+  const isPoll = post.kind === 'poll' && Array.isArray(post.options) && post.options.length >= 2;
+  console.log(`[Promo] Posting ${source} (slot ${slot}, ${isPoll ? 'poll' : 'text'}): ${post.text}`);
 
-  markPromoSlot(slotKey);
+  if (isPoll) await postPoll(post.text, post.options);
+  else await postPromoTweet(post.text);
+
+  if (queued && !DRY_RUN) markQueueItem(queued.id);
+  if (!DRY_RUN) markPromoSlot(slotKey);
   console.log('[Promo] Done.');
 }
 
