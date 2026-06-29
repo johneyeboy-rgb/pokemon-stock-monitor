@@ -84,7 +84,7 @@ async function checkRetailer(browser, name, retailer, product) {
     const page = await context.newPage();
 
     // Block images/fonts to speed up loading
-    await page.route('**/*.{png,jpg,jpeg,gif,webp,woff,woff2,ttf}', r => r.abort());
+    await page.route('**/*.{woff,woff2,ttf,otf}', r => r.abort()); // block fonts only (keep images so we can grab product photos)
 
     const url = retailer.buildSearchUrl(product);
     const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
@@ -112,6 +112,7 @@ async function checkRetailer(browser, name, retailer, product) {
       titleSel: retailer.titleSelector ?? null,
       linkSel: retailer.linkSelector ?? null,
       priceSel: retailer.priceSelector ?? null,
+      imageSel: retailer.imageSelector ?? null,
       excludeRe: retailer.excludePattern ?? null,
       inSel: retailer.cardSelectors?.inStock ?? [],
       outSel: retailer.cardSelectors?.outOfStock ?? [],
@@ -123,8 +124,9 @@ async function checkRetailer(browser, name, retailer, product) {
 
     if (!found || !found.matched) {
       // Product not present in the search results → treat as not in stock.
-      return { retailer: name, product, inStock: false, price: null, url };
+      return { retailer: name, product, inStock: false, price: null, image: null, url };
     }
+    if (DRY_RUN) console.log(`   [img] ${found.image ?? '(none)'}`);
 
     // Fall back to Claude on the matched card's text if the markup was inconclusive.
     let inStock = found.inStock; // true | false | null
@@ -133,7 +135,7 @@ async function checkRetailer(browser, name, retailer, product) {
     }
 
     const stockUrl = inStock ? (found.href ?? url) : url;
-    return { retailer: name, product, inStock, price: found.price ?? null, url: stockUrl };
+    return { retailer: name, product, inStock, price: found.price ?? null, image: found.image ?? null, url: stockUrl };
   } finally {
     await context.close();
   }
@@ -144,7 +146,7 @@ async function checkRetailer(browser, name, retailer, product) {
  * Picks the best title-matched card, then reads in/out-of-stock signals and the
  * product link from it, returning plain serializable data.
  */
-function scanForProduct({ cardSel, titleSel, linkSel, priceSel, excludeRe, inSel, outSel, product, threshold, stopwords, baseUrl }) {
+function scanForProduct({ cardSel, titleSel, linkSel, priceSel, imageSel, excludeRe, inSel, outSel, product, threshold, stopwords, baseUrl }) {
   const stop = new Set(stopwords);
   const tokenize = s => (s || '')
     .toLowerCase()
@@ -214,8 +216,44 @@ function scanForProduct({ cardSel, titleSel, linkSel, priceSel, excludeRe, inSel
   const pm = priceText.match(/\$\s?([\d,]+(?:\.\d{1,2})?)/);
   const price = pm ? parseFloat(pm[1].replace(/,/g, '')) : null;
 
+  // Product image — pull from an <img> (src/srcset/data-src), or a CSS
+  // background-image (GameStop renders the photo that way). Search the card, then
+  // climb to the single-tile wrapper if the image is a sibling (Target/GameStop
+  // keep it outside the details element), stopping before any ancestor that wraps
+  // multiple cards so we never grab a neighbor's photo.
+  const pickFrom = (scope) => {
+    const im = scope.querySelector(imageSel || 'img');
+    if (im) {
+      const ss = im.getAttribute('srcset');
+      let u = null;
+      if (ss) { const arr = ss.split(',').map(s => s.trim().split(/\s+/)[0]).filter(Boolean); u = arr[arr.length - 1] || null; }
+      u = u || im.getAttribute('src') || im.getAttribute('data-src') || im.getAttribute('data-image') || null;
+      if (u) return u;
+    }
+    for (const el of [scope, ...scope.querySelectorAll('[style*="url("]')]) {
+      const st = (el.getAttribute && el.getAttribute('style')) || '';
+      if (!/background/i.test(st)) continue;
+      const m = st.match(/url\((['"]?)(.*?)\1\)/i);
+      if (m && m[2]) return m[2];
+    }
+    return null;
+  };
+
+  let image = pickFrom(best);
+  let scope = best.parentElement;
+  let hops = 0;
+  while (scope && !image && hops < 3) {
+    if (cardSel && scope.querySelectorAll(cardSel).length > 1) break;
+    image = pickFrom(scope);
+    scope = scope.parentElement;
+    hops++;
+  }
+  if (image && image.startsWith('//')) image = 'https:' + image;
+  else if (image && image.startsWith('/')) image = baseUrl + image;
+  if (image && !/^https?:/.test(image)) image = null; // ignore data: URIs / junk
+
   const text = (best.innerText || best.textContent || '').slice(0, 2000);
-  return { matched: true, score: bestScore, inStock, href, text, price };
+  return { matched: true, score: bestScore, inStock, href, text, price, image };
 }
 
 /**

@@ -3,7 +3,7 @@
  * Requires: X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET in env
  */
 
-import { TwitterApi } from 'twitter-api-v2';
+import { TwitterApi, EUploadMimeType } from 'twitter-api-v2';
 
 const DRY_RUN = !!process.env.DRY_RUN;
 
@@ -22,10 +22,29 @@ function rw() {
   return _rw;
 }
 
+// Download a product image and upload it to X; returns a media_id or null.
+// Best-effort — any failure (fetch, size, type, upload) falls back to text-only.
+async function uploadImage(imageUrl) {
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > 5_000_000) return null; // X image limit ~5MB
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    const mime = ct.includes('png') ? EUploadMimeType.Png
+      : ct.includes('webp') ? EUploadMimeType.Webp
+      : ct.includes('gif') ? EUploadMimeType.Gif
+      : EUploadMimeType.Jpeg;
+    return await rw().v2.uploadMedia(buf, { media_type: mime });
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Post a restock alert tweet
+ * Post a restock alert tweet (with the product image when available)
  */
-export async function postRestockAlert({ product, retailer, url, price }) {
+export async function postRestockAlert({ product, retailer, url, price, image }) {
   const retailerLabel = {
     pokemonCenter: 'Pokemon Center',
     target: 'Target',
@@ -56,12 +75,14 @@ export async function postRestockAlert({ product, retailer, url, price }) {
   ].find(t => len(t) <= 280) ?? (line1 + link);
 
   if (DRY_RUN) {
-    console.log(`[DRY RUN] Would post restock tweet:\n${tweet}\n`);
+    console.log(`[DRY RUN] Would post restock tweet${image ? ' (with image: ' + image + ')' : ''}:\n${tweet}\n`);
     return { id: 'dry-run' };
   }
 
-  const result = await rw().v2.tweet(tweet);
-  console.log(`[X] Posted: ${result.data.id}`);
+  const mediaId = image ? await uploadImage(image) : null;
+  const payload = mediaId ? { text: tweet, media: { media_ids: [mediaId] } } : tweet;
+  const result = await rw().v2.tweet(payload);
+  console.log(`[X] Posted: ${result.data.id}${mediaId ? ' (with image)' : ''}`);
   return result.data;
 }
 
