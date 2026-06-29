@@ -1,1 +1,12 @@
-[]
+[
+  { "id": "2026-06-29-greninja-incoming", "kind": "text", "text": "📦 Incoming this week: the Mega Greninja ex Premium Collection (July 3) — 8 boosters, a foil Greninja ex promo + an oversized card. Worth watching for at retailers 👀 #PokemonTCG", "postAfter": "2026-06-29T00:00:00Z", "expires": "2026-07-03T20:00:00Z" },
+  { "id": "2026-06-29-pitchblack-preorder", "kind": "text", "text": "🖤 The next main set, Pitch Black, lands July 17 — headlined by Mega Darkrai ex & Mega Zeraora ex (boosters, ETBs & collections). Lock in a preorder early if it's on your list 👀 #PokemonTCG", "postAfter": "2026-06-29T00:00:00Z", "expires": "2026-07-16T00:00:00Z" },
+  { "id": "2026-06-30-pc-window-tip", "kind": "text", "text": "⏰ Pokémon Center tip: no fixed schedule, but restocks most often hit midweek (Tue/Thu) in the ~12–4pm ET window. Point your alerts there 🔔 #PokemonTCG #Restock", "postAfter": "2026-06-30T00:00:00Z", "expires": "2026-07-07T00:00:00Z" },
+  { "id": "2026-06-30-poll-mega-hype", "kind": "poll", "text": "Which Mega are you most hyped to pull? 🔥", "options": ["Mega Darkrai ex", "Mega Greninja ex", "Mega Zeraora ex", "Mega Rayquaza ex"], "postAfter": "2026-06-30T00:00:00Z" },
+  { "id": "2026-07-01-worlds-decks", "kind": "text", "text": "The 2025 World Championships Decks are out — card-for-card replicas of the Anaheim title-contender decks. Picking any up to play? 🏆 #PokemonTCG", "postAfter": "2026-07-01T00:00:00Z", "expires": "2026-07-10T00:00:00Z" },
+  { "id": "2026-07-01-restock-strategy", "kind": "text", "text": "Restock 101: turn on notifications for accounts you trust, save your payment info, and be quick — the best drops vanish in minutes ⏱️ #PokemonTCG #Restock", "postAfter": "2026-07-01T00:00:00Z" },
+  { "id": "2026-07-02-first-partner-poll", "kind": "poll", "text": "First Partner Illustration Collection S2 is out — whose partners are you chasing? 🎨", "options": ["Johto", "Unova", "Galar", "All of them"], "postAfter": "2026-07-02T00:00:00Z" },
+  { "id": "2026-07-02-mini-tins", "kind": "text", "text": "Lumiose City Mini Tins are around too — 2 boosters + a sticker sheet & art card each, five to collect. A cheap way to chase packs 🎴 #PokemonTCG", "postAfter": "2026-07-02T00:00:00Z", "expires": "2026-07-12T00:00:00Z" },
+  { "id": "2026-07-03-greninja-live", "kind": "text", "text": "🟦 It's here: the Mega Greninja ex Premium Collection is out now (July 3). Snagging one? Watch retailers + Pokémon Center for stock 🔔 #PokemonTCG #Restock", "postAfter": "2026-07-03T00:00:00Z", "expires": "2026-07-06T00:00:00Z" },
+  { "id": "2026-07-04-poll-collect-style", "kind": "poll", "text": "How are you collecting the Mega era? 📦", "options": ["Sealed", "Singles", "Both", "Just vibes"], "postAfter": "2026-07-04T00:00:00Z" }
+]
