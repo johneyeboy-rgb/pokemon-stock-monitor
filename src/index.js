@@ -11,7 +11,7 @@
  */
 
 import 'dotenv/config';
-import { mkdirSync } from 'fs';
+import { mkdirSync, readFileSync, existsSync } from 'fs';
 import { checkAllRetailers } from './scraper.js';
 import { alreadyPostedToday, markAsPosted } from './state.js';
 import { postRestockAlert } from './poster.js';
@@ -21,13 +21,32 @@ import { postRestockAlert } from './poster.js';
 const DRY_RUN = !!process.env.DRY_RUN;
 
 // ── Products to watch ───────────────────────────────────────────────────────
-// msrp drives the price filter below — alerts fire only at or below MSRP × MAX_MARKUP,
-// which keeps scalper/marketplace listings (common on Amazon & Walmart) out.
-const WATCHED_PRODUCTS = [
+// The watch list lives in config/watchlist.json (data, not code) so the
+// /update-watchlist agent — or you — can edit it and review changes as a diff.
+// msrp drives the price filter below. A built-in default is used if the file is
+// missing or invalid, so a bad edit never silently stops all monitoring.
+const WATCHLIST_FILE = './config/watchlist.json';
+const DEFAULT_WATCHLIST = [
   { name: 'Scarlet & Violet Elite Trainer Box', msrp: 49.99 },
   { name: 'Pokemon 151 Booster Bundle', msrp: 29.99 },
   { name: 'Pokemon Crown Zenith Elite Trainer Box', msrp: 49.99 },
 ];
+
+function loadWatchlist() {
+  try {
+    if (!existsSync(WATCHLIST_FILE)) return DEFAULT_WATCHLIST;
+    const arr = JSON.parse(readFileSync(WATCHLIST_FILE, 'utf8'));
+    const valid = Array.isArray(arr)
+      ? arr.filter(p => p && typeof p.name === 'string' && typeof p.msrp === 'number')
+      : [];
+    return valid.length ? valid : DEFAULT_WATCHLIST;
+  } catch (err) {
+    console.error('[Agent] Could not read watchlist.json, using default:', err.message);
+    return DEFAULT_WATCHLIST;
+  }
+}
+
+const WATCHED_PRODUCTS = loadWatchlist();
 
 // Only alert when the detected price is at most this multiple of MSRP
 // (1.4 = up to 40% over MSRP). Listings with no detectable price are allowed
