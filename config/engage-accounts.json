@@ -1,0 +1,16 @@
+{
+  "_comment": "Seed list for the /engage skill. Edit freely. The skill researches recent posts from these accounts/topics and drafts replies for you to post MANUALLY. Add the handles you actually want to engage; remove ones that aren't a good audience fit. The skill may also discover other big active accounts.",
+  "voice": "Friendly, in-the-know Pokemon TCG enthusiast who runs a restock-alert account. Helpful, genuine, conversational, lightly witty. Never salesy, never spammy, never empty hype. Sounds like a real collector talking.",
+  "accounts": [
+    { "handle": "@Pokemon", "category": "official", "note": "Official Pokemon — huge reach, broad audience" },
+    { "handle": "@PokemonTCG", "category": "official", "note": "Official TCG channel" },
+    { "handle": "@PokeBeach", "category": "news", "note": "Major TCG news/leaks site" }
+  ],
+  "topics": [
+    "pokemon tcg restock",
+    "pokemon center drop",
+    "pokemon tcg new set",
+    "pokemon booster bundle",
+    "pokemon elite trainer box"
+  ]
+}
