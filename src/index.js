@@ -25,7 +25,7 @@ const DRY_RUN = !!process.env.DRY_RUN;
 // which keeps scalper/marketplace listings (common on Amazon & Walmart) out.
 const WATCHED_PRODUCTS = [
   { name: 'Scarlet & Violet Elite Trainer Box', msrp: 49.99 },
-  { name: 'Pokemon 151 Booster Bundle', msrp: 25.99 },
+  { name: 'Pokemon 151 Booster Bundle', msrp: 29.99 },
   { name: 'Pokemon Crown Zenith Elite Trainer Box', msrp: 49.99 },
 ];
 

@@ -226,7 +226,7 @@ async function detectByAI(cardText, product, retailerName) {
   if (!cardText || !cardText.trim()) return false;
 
   const msg = await anthropic().messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5',
     max_tokens: 64,
     messages: [{
       role: 'user',
