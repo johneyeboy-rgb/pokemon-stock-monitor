@@ -32,6 +32,7 @@ export async function postRestockAlert({ product, retailer, url, price }) {
     bestBuy: 'Best Buy',
     walmart: 'Walmart',
     amazon: 'Amazon',
+    gameStop: 'GameStop',
   }[retailer] ?? retailer;
 
   const priceStr = price != null ? ` for $${price}` : '';

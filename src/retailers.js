@@ -117,10 +117,10 @@ export const SITES = {
   // ─── Walmart ───────────────────────────────────────────────────────────────
   // Most aggressive bot protection. Higher delay + AI fallback most likely here.
   walmart: {
-    // Re-enabled with playwright-extra + stealth, which clears the PerimeterX
-    // "Robot or human?" challenge from a residential IP. May re-block from
-    // datacenter IPs (e.g. GitHub Actions) — watch the CI runs.
-    enabled: true,
+    // DISABLED for the cloud bot: stealth clears it locally, but GitHub Actions'
+    // datacenter IP gets 0 cards (blocked). Re-enable with a scraping API or a
+    // self-hosted (residential-IP) runner. Still works if you run locally.
+    enabled: false,
     baseUrl: 'https://www.walmart.com',
     delayMs: 5000, // Walmart rate-limits aggressively — keep this high
     userAgent:
@@ -157,7 +157,10 @@ export const SITES = {
   // fallback. NOTE: Amazon is marketplace-heavy, so items are often "in stock"
   // via third-party sellers at inflated prices — consider a price filter.
   amazon: {
-    enabled: true,
+    // DISABLED for the cloud bot: loads locally via stealth, but blocked from
+    // GitHub Actions' datacenter IP. Re-enable with a scraping API / residential
+    // runner. Still works if you run locally.
+    enabled: false,
     baseUrl: 'https://www.amazon.com',
     delayMs: 4000,
     userAgent:
@@ -174,6 +177,33 @@ export const SITES = {
     cardSelectors: {
       // No reliable positive add-to-cart on search tiles; the AI fallback judges
       // from card text (price shown = available; "Currently unavailable" = not).
+      inStock: [],
+      outOfStock: [],
+    },
+  },
+
+  // ─── GameStop ────────────────────────────────────────────────────────────
+  // Carries Pokemon TCG at retail; loads cleanly with stealth (lighter bot
+  // protection than Walmart/Amazon — survives CI? watch the logs). Tiles don't
+  // expose stock state, so the AI fallback judges from card text. Matching uses
+  // the full tile text (no title selector); price comes from the tile text.
+  gameStop: {
+    enabled: true,
+    baseUrl: 'https://www.gamestop.com',
+    delayMs: 3500,
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+    buildSearchUrl: (product) =>
+      `https://www.gamestop.com/search/?q=${encodeURIComponent(product)}`,
+    waitSelector: '.product-tile',
+    productCardSelector: '.product-tile',
+    linkSelector: 'a[href*="/products/"]',
+    // Skip graded singles — GameStop lists lots of PSA/CGC cards whose titles
+    // contain the product words (e.g. "...Elite Trainer Box Miraidon PSA 9").
+    excludePattern: 'graded|psa|cgc|bgs',
+    cardSelectors: {
       inStock: [],
       outOfStock: [],
     },

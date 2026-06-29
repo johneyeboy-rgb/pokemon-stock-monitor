@@ -112,6 +112,7 @@ async function checkRetailer(browser, name, retailer, product) {
       titleSel: retailer.titleSelector ?? null,
       linkSel: retailer.linkSelector ?? null,
       priceSel: retailer.priceSelector ?? null,
+      excludeRe: retailer.excludePattern ?? null,
       inSel: retailer.cardSelectors?.inStock ?? [],
       outSel: retailer.cardSelectors?.outOfStock ?? [],
       product,
@@ -143,7 +144,7 @@ async function checkRetailer(browser, name, retailer, product) {
  * Picks the best title-matched card, then reads in/out-of-stock signals and the
  * product link from it, returning plain serializable data.
  */
-function scanForProduct({ cardSel, titleSel, linkSel, priceSel, inSel, outSel, product, threshold, stopwords, baseUrl }) {
+function scanForProduct({ cardSel, titleSel, linkSel, priceSel, excludeRe, inSel, outSel, product, threshold, stopwords, baseUrl }) {
   const stop = new Set(stopwords);
   const tokenize = s => (s || '')
     .toLowerCase()
@@ -161,10 +162,18 @@ function scanForProduct({ cardSel, titleSel, linkSel, priceSel, inSel, outSel, p
     return hits / want.length;
   };
 
+  const exclude = excludeRe ? new RegExp(excludeRe, 'i') : null;
   const cards = cardSel ? Array.from(document.querySelectorAll(cardSel)) : [];
   let best = null;
   let bestScore = 0;
   for (const c of cards) {
+    // Skip excluded listings (e.g. graded singles: PSA/CGC/BGS) — test the card
+    // text plus its link href.
+    if (exclude) {
+      const a = c.querySelector(linkSel || 'a');
+      const hay = (c.textContent || '') + ' ' + (a ? a.getAttribute('href') || '' : '');
+      if (exclude.test(hay)) continue;
+    }
     const titleEl = titleSel ? c.querySelector(titleSel) : null;
     const title = ((titleEl || c).textContent || '').trim();
     const s = score(title);
