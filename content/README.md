@@ -45,7 +45,8 @@ posts **at most once** (tracked by `id`).
 | `text` | ✅ | The post body. Keep under ~270 chars. |
 | `kind` | – | `"text"` (default) or `"poll"`. |
 | `options` | poll only | 2–4 choices, each ≤ 25 chars. |
-| `image` | – | Direct URL to an image to attach. Must be publicly accessible, ≤ 5 MB. Best-effort — falls back to text-only if the URL fails to load. Only include URLs you have verified exist. |
+| `priority` | – | Integer. Lower = posts sooner when multiple items are eligible. Use `1` for product reveals/breaking news, `2` for release reminders, `3` for tips/polls. Omit for normal queue order. |
+| `image` | – | Direct URL to an image to attach. Must be publicly accessible, ≤ 5 MB. Best-effort — falls back to text-only if the URL fails to load. Only include URLs you have verified exist. Required on priority 1 reveal posts. |
 | `postAfter` | – | ISO date/time. Item is ineligible until now ≥ this. |
 | `expires` | – | ISO date/time. Item is skipped once now ≥ this (freshness guard). |
 

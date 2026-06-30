@@ -79,17 +79,20 @@ export function loadQueue() {
 /**
  * Pick the next eligible queued post, or null if none.
  * Eligible = has id + text, not already posted, postAfter reached, not expired.
- * Items are considered in file order, so order them by priority.
+ * Sorted by `priority` ascending (1 = urgent reveals, 2 = reminders, 3 = tips/polls).
+ * Items without a priority field sort after all numbered items. Array order is the
+ * tiebreaker within the same priority level (stable sort).
  * @param {Date} now
  * @param {(id: string) => boolean} isPosted
  */
 export function pickQueuedPost(now = new Date(), isPosted = () => false) {
-  for (const item of loadQueue()) {
-    if (!item || !item.id || !item.text) continue;
-    if (isPosted(item.id)) continue;
-    if (item.postAfter && new Date(item.postAfter) > now) continue;
-    if (item.expires && new Date(item.expires) <= now) continue;
-    return item;
-  }
-  return null;
+  const eligible = loadQueue().filter(item => {
+    if (!item || !item.id || !item.text) return false;
+    if (isPosted(item.id)) return false;
+    if (item.postAfter && new Date(item.postAfter) > now) return false;
+    if (item.expires && new Date(item.expires) <= now) return false;
+    return true;
+  });
+  eligible.sort((a, b) => (a.priority ?? Infinity) - (b.priority ?? Infinity));
+  return eligible[0] ?? null;
 }

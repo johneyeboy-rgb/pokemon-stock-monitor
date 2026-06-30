@@ -53,6 +53,20 @@ Tips should be concrete enough to act on immediately:
   retailers — they're cheaper and collectors skip them, so stock lasts ~10 min."
 - Include the *why* behind the tip so it reads as insider knowledge, not generic advice.
 
+#### Priority field — reveals jump the queue
+Every queue item can carry a `priority` integer. The pipeline sorts eligible items by
+this before picking — lower number fires first. Use these tiers:
+
+| Value | When to use |
+|---|---|
+| `1` | **Product reveals & breaking news** — new set announcements, card reveals, product lineup drops. These are time-sensitive and high-value; always pair with a verified `image`. |
+| `2` | Release reminders, restock tips with a specific date. |
+| `3` | Tips, evergreen polls, engagement posts. |
+| *(omit)* | Normal queue order (sorts after all numbered items). |
+
+**Rule: every `priority: 1` post MUST include a verified `image` URL.** A reveal without
+a visual is a missed opportunity — the image is what stops the scroll.
+
 #### Images
 Queue items can carry an optional `image` field (a direct URL to attach to the post).
 Include one when you can verify a public, high-quality image URL that matches the post:
@@ -70,7 +84,7 @@ Include one when you can verify a public, high-quality image URL that matches th
   and `expires` so a stale reminder is never posted (e.g. a "drops Friday" post:
   `postAfter` Wed, `expires` Fri evening).
 - Evergreen-ish posts (polls, tips) can omit dates.
-- Order the array by priority — earlier = posted first when multiple are eligible.
+- Within the same priority level, array order is the tiebreaker.
 
 ### 5. Accuracy & ToS guardrails (non-negotiable)
 - **Source facts.** Attribute where natural ("via PokeBeach"). Never fabricate
@@ -83,9 +97,10 @@ Include one when you can verify a public, high-quality image URL that matches th
 ### 6. Format constraints
 - `id`: unique, date-prefixed (e.g. `2026-07-04-pc-window`).
 - `text`: <= ~270 chars; tasteful hashtags (2–3 max).
+- `priority`: integer 1–3. Required on reveal/breaking-news posts (`1`). Optional elsewhere.
 - Polls: `kind: "poll"`, 2–4 `options`, each <= 25 chars. No `image` on polls.
-- `image`: optional direct URL to a publicly accessible image (≤ 5 MB). Only include
-  if you have verified the URL is live and shows the correct content.
+- `image`: optional direct URL to a publicly accessible image (≤ 5 MB). **Required on
+  every `priority: 1` item.** Only include if you have verified the URL is live.
 - Valid JSON array. Validate it parses before writing.
 
 ### 7. Write + review (the approval gate)
