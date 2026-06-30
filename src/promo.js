@@ -59,7 +59,7 @@ async function run() {
   console.log(`[Promo] Posting ${source} (slot ${slot}, ${isPoll ? 'poll' : 'text'}): ${post.text}`);
 
   if (isPoll) await postPoll(post.text, post.options);
-  else await postPromoTweet(post.text);
+  else await postPromoTweet(post.text, post.image ?? null);
 
   if (queued && !DRY_RUN) markQueueItem(queued.id);
   if (!DRY_RUN) markPromoSlot(slotKey);

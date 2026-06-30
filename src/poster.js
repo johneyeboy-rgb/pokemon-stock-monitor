@@ -87,16 +87,20 @@ export async function postRestockAlert({ product, retailer, url, price, image })
 }
 
 /**
- * Post a daily engagement/promo tweet
+ * Post a daily engagement/promo tweet, with an optional image attachment.
+ * @param {string} text
+ * @param {string|null} imageUrl - direct URL to an image to attach (best-effort)
  */
-export async function postPromoTweet(text) {
+export async function postPromoTweet(text, imageUrl = null) {
   if (DRY_RUN) {
-    console.log(`[DRY RUN] Would post promo tweet:\n${text}\n`);
+    console.log(`[DRY RUN] Would post promo tweet${imageUrl ? ' (with image: ' + imageUrl + ')' : ''}:\n${text}\n`);
     return { id: 'dry-run' };
   }
 
-  const result = await rw().v2.tweet(text);
-  console.log(`[X] Promo posted: ${result.data.id}`);
+  const mediaId = imageUrl ? await uploadImage(imageUrl) : null;
+  const payload = mediaId ? { text, media: { media_ids: [mediaId] } } : text;
+  const result = await rw().v2.tweet(payload);
+  console.log(`[X] Promo posted: ${result.data.id}${mediaId ? ' (with image)' : ''}`);
   return result.data;
 }
 

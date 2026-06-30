@@ -37,6 +37,34 @@ A good week blends:
 Don't try to fill every slot — the evergreen pool covers gaps. Keep at most ~1
 follow/CTA post in the batch.
 
+#### Writing news posts — more detail, not less
+News posts should give followers actual substance, not just a headline:
+- Include the set name, card count, notable chase cards or alt arts, retail price,
+  and release date in 2–3 sentences.
+- Explain *why it matters* for restock hunters — e.g. "high pull rate on alt arts
+  means ETBs will sell out fast" or "bundle-only exclusives drive secondary prices."
+- Cite the source naturally in the text ("via PokeBeach", "per the official reveal").
+
+#### Writing tips — specific and actionable
+Tips should be concrete enough to act on immediately:
+- Instead of "check Target early" → "Target restocks usually go live between 6–8am
+  ET — add to cart fast, checkout slows when servers spike."
+- Instead of "watch for bundles" → "Booster Bundles sell out before ETBs at most
+  retailers — they're cheaper and collectors skip them, so stock lasts ~10 min."
+- Include the *why* behind the tip so it reads as insider knowledge, not generic advice.
+
+#### Images
+Queue items can carry an optional `image` field (a direct URL to attach to the post).
+Include one when you can verify a public, high-quality image URL that matches the post:
+- **Official product art** — Pokemon.com press images, retailer product images (Target/
+  Best Buy CDN URLs from search results), or official social media post images.
+- **Card art** — for notable card reveals, the official card image from the Pokemon
+  TCG website or a reputable TCG database (e.g. Bulbapedia, TCGPlayer).
+- **Only include URLs you have actually fetched and confirmed exist.** A broken image
+  URL silently falls back to text-only (no error), but a wrong image looks unprofessional.
+- Polls cannot have images — omit the field for poll items.
+- Do not invent or guess image URLs. If you can't find a verified image, omit the field.
+
 ### 4. Dates & freshness (critical)
 - For anything time-sensitive, set `postAfter` so it fires near the relevant day
   and `expires` so a stale reminder is never posted (e.g. a "drops Friday" post:
@@ -55,7 +83,9 @@ follow/CTA post in the batch.
 ### 6. Format constraints
 - `id`: unique, date-prefixed (e.g. `2026-07-04-pc-window`).
 - `text`: <= ~270 chars; tasteful hashtags (2–3 max).
-- Polls: `kind: "poll"`, 2–4 `options`, each <= 25 chars.
+- Polls: `kind: "poll"`, 2–4 `options`, each <= 25 chars. No `image` on polls.
+- `image`: optional direct URL to a publicly accessible image (≤ 5 MB). Only include
+  if you have verified the URL is live and shows the correct content.
 - Valid JSON array. Validate it parses before writing.
 
 ### 7. Write + review (the approval gate)
