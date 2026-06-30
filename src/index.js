@@ -48,10 +48,12 @@ function loadWatchlist() {
 
 const WATCHED_PRODUCTS = loadWatchlist();
 
-// Only alert when the detected price is at most this multiple of MSRP
-// (1.4 = up to 40% over MSRP). Listings with no detectable price are allowed
-// through, so a price-parse miss never hides a genuine restock.
+// Only alert when detected price ≤ max(MSRP × 1.4, MSRP + $10).
+// The flat $10 gives cheap products (mini tins, etc.) extra headroom so a
+// modest retail premium doesn't suppress a real restock; the percentage rule
+// governs more expensive items where $10 is already below 40%.
 const MAX_MARKUP = 1.4;
+const MAX_FLAT_PREMIUM = 10;
 // Reject prices suspiciously below MSRP — signals a wrong-product match
 // (e.g. a single booster pack matched instead of a 6-pack bundle).
 const MIN_PRICE_RATIO = 0.6;
@@ -72,7 +74,7 @@ async function run() {
 
     // Price filter — skip scalper/marketplace listings and wrong-product matches.
     const msrp = msrpByName.get(result.product);
-    const maxPrice = msrp != null ? msrp * MAX_MARKUP : null;
+    const maxPrice = msrp != null ? Math.max(msrp * MAX_MARKUP, msrp + MAX_FLAT_PREMIUM) : null;
     const minPrice = msrp != null ? msrp * MIN_PRICE_RATIO : null;
     if (maxPrice != null && result.price != null && result.price > maxPrice) {
       console.log(`[Agent] Skipping over-MSRP: ${result.product} @ ${result.retailer} — $${result.price} > $${maxPrice.toFixed(2)} cap`);
