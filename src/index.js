@@ -52,6 +52,9 @@ const WATCHED_PRODUCTS = loadWatchlist();
 // (1.4 = up to 40% over MSRP). Listings with no detectable price are allowed
 // through, so a price-parse miss never hides a genuine restock.
 const MAX_MARKUP = 1.4;
+// Reject prices suspiciously below MSRP — signals a wrong-product match
+// (e.g. a single booster pack matched instead of a 6-pack bundle).
+const MIN_PRICE_RATIO = 0.6;
 const msrpByName = new Map(WATCHED_PRODUCTS.map(p => [p.name, p.msrp]));
 
 // ── Run the agent loop ──────────────────────────────────────────────────────
@@ -67,11 +70,16 @@ async function run() {
     if (!result.inStock) continue;
     if (result.error) continue;
 
-    // Price filter — skip listings well above MSRP (scalpers / marketplace resellers).
+    // Price filter — skip scalper/marketplace listings and wrong-product matches.
     const msrp = msrpByName.get(result.product);
     const maxPrice = msrp != null ? msrp * MAX_MARKUP : null;
+    const minPrice = msrp != null ? msrp * MIN_PRICE_RATIO : null;
     if (maxPrice != null && result.price != null && result.price > maxPrice) {
       console.log(`[Agent] Skipping over-MSRP: ${result.product} @ ${result.retailer} — $${result.price} > $${maxPrice.toFixed(2)} cap`);
+      continue;
+    }
+    if (minPrice != null && result.price != null && result.price < minPrice) {
+      console.log(`[Agent] Skipping under-floor: ${result.product} @ ${result.retailer} — $${result.price} < $${minPrice.toFixed(2)} floor (likely wrong product matched)`);
       continue;
     }
 
