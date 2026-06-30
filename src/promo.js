@@ -45,6 +45,20 @@ async function run() {
   const slot = currentSlot();
   const slotKey = String(slot);
 
+  // Priority-1 reveals are time-sensitive: fire immediately regardless of
+  // whether the current slot has already been used by a scheduled post.
+  // The slot is NOT consumed so regular content can still post in that slot.
+  const urgent = pickQueuedPost(new Date(), alreadyPostedQueueItem);
+  if (urgent && urgent.priority === 1) {
+    const isPoll = urgent.kind === 'poll' && Array.isArray(urgent.options) && urgent.options.length >= 2;
+    console.log(`[Promo] Urgent reveal — posting "${urgent.id}" (bypassing slot gate)`);
+    if (isPoll) await postPoll(urgent.text, urgent.options);
+    else await postPromoTweet(urgent.text, urgent.image ?? null);
+    if (!DRY_RUN) markQueueItem(urgent.id);
+    console.log('[Promo] Reveal posted. Slot remains available for regular content.');
+    return;
+  }
+
   if (alreadyPostedPromoSlot(slotKey)) {
     console.log(`[Promo] Slot ${slot} already posted today — skipping.`);
     return;
