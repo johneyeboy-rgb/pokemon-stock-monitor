@@ -22,12 +22,21 @@ function rw() {
   return _rw;
 }
 
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Referer': 'https://www.pokemon.com/',
+  'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+};
+
 // Download a product image and upload it to X; returns a media_id or null.
 // Best-effort — any failure (fetch, size, type, upload) falls back to text-only.
 async function uploadImage(imageUrl) {
   try {
-    const res = await fetch(imageUrl);
-    if (!res.ok) return null;
+    const res = await fetch(imageUrl, { headers: FETCH_HEADERS });
+    if (!res.ok) {
+      console.warn(`[image] Fetch failed ${res.status} for ${imageUrl} — posting text-only`);
+      return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
     if (!buf.length || buf.length > 5_000_000) return null; // X image limit ~5MB
     const ct = (res.headers.get('content-type') || '').toLowerCase();
@@ -36,7 +45,8 @@ async function uploadImage(imageUrl) {
       : ct.includes('gif') ? EUploadMimeType.Gif
       : EUploadMimeType.Jpeg;
     return await rw().v2.uploadMedia(buf, { media_type: mime });
-  } catch {
+  } catch (err) {
+    console.warn(`[image] Upload error for ${imageUrl}: ${err.message} — posting text-only`);
     return null;
   }
 }
