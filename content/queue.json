@@ -1,1 +1,79 @@
-[]
+[
+  {
+    "id": "2026-07-01-pitchblack-reveal",
+    "kind": "text",
+    "priority": 1,
+    "text": "🖤 Pitch Black hits July 17 — 118 cards, 6 Mega Pokémon ex, 6 SIRs. Mega Darkrai ex headlines with Mega Zeraora ex, Chandelure ex & Excadrill ex. Bundles at $26.94. Watching every retailer the moment stock drops 👀 #PokemonTCG #PitchBlack",
+    "image": "https://mcdn.pokemon.com/image/upload/c_limit,w_1439/f_auto/q_auto:best/v1/live/static-assets/content-assets/cms2/img/trading-card-game/_tiles/me/me05/announce/me05-announce-169-en.png",
+    "postAfter": "2026-07-01T00:00:00Z",
+    "expires": "2026-07-18T00:00:00Z"
+  },
+  {
+    "id": "2026-07-02-deltareign-reveal",
+    "kind": "text",
+    "priority": 1,
+    "text": "🌩️ Delta Reign (ME06) officially revealed — stars Mega Rayquaza ex and introduces Paired Stadiums, a new mechanic where two stadium cards play simultaneously as one. Japan July 31 as Storm Emeralda; English November 6. One to watch 👀 (via PokeBeach) #PokemonTCG #DeltaReign",
+    "image": "https://comicbook.com/wp-content/uploads/sites/4/2026/06/Mega-Rayquaza-ex-Delta-Reign-Teaser.jpg?w=1024",
+    "postAfter": "2026-07-02T00:00:00Z"
+  },
+  {
+    "id": "2026-07-03-pitchblack-prerelease",
+    "kind": "text",
+    "priority": 2,
+    "text": "⚡ Pitch Black prereleases run July 4–12 at local game stores — crack packs from a Build & Battle Box a full week before the July 17 retail launch. Find your local event at play.pokemon.com 🖤 #PokemonTCG #PitchBlack",
+    "postAfter": "2026-07-03T00:00:00Z",
+    "expires": "2026-07-13T00:00:00Z"
+  },
+  {
+    "id": "2026-07-01-bundle-tip",
+    "kind": "text",
+    "priority": 2,
+    "text": "💡 Restock tip: Booster Bundles (6 packs, $26.94) sell out faster than ETBs at most retailers — they're cheaper so collectors snap them first. Better value per pack AND gone in minutes. We alert on both the moment they hit 🔔 #PokemonTCG #Restock"
+  },
+  {
+    "id": "2026-07-01-pc-timing-tip",
+    "kind": "text",
+    "priority": 2,
+    "text": "⏰ Pokémon Center tip: drops most often hit Tuesday & Thursday between 9am–1pm PT (12pm–4pm ET) per tracker data — no official schedule, but that's the highest-frequency window. Have checkout info saved and notifications on 🔔 #PokemonTCG #Restock"
+  },
+  {
+    "id": "2026-07-10-pitchblack-oneweek",
+    "kind": "text",
+    "priority": 2,
+    "text": "📦 One week to Pitch Black — drops July 17. We're live-monitoring Target, Best Buy & GameStop for the moment ETBs and Bundles ($26.94) go live. Follow now so you don't miss the alert 🔔 #PokemonTCG #PitchBlack #Restock",
+    "postAfter": "2026-07-10T00:00:00Z",
+    "expires": "2026-07-16T00:00:00Z"
+  },
+  {
+    "id": "2026-07-16-pitchblack-tomorrow",
+    "kind": "text",
+    "priority": 2,
+    "text": "🚀 Pitch Black drops TOMORROW — July 17. Monitoring Target, Best Buy & GameStop in real time. Bundles at $26.94 retail. Follow + hit the bell so you get the alert the second stock goes live 🔔 #PokemonTCG #PitchBlack #Restock",
+    "postAfter": "2026-07-16T00:00:00Z",
+    "expires": "2026-07-18T00:00:00Z"
+  },
+  {
+    "id": "2026-07-04-poll-pitchblack-mega",
+    "kind": "poll",
+    "priority": 3,
+    "text": "Which Pitch Black Mega are you most hyped to pull? 🖤",
+    "options": ["Mega Darkrai ex", "Mega Zeraora ex", "Mega Chandelure ex", "Mega Excadrill ex"],
+    "postAfter": "2026-07-04T00:00:00Z"
+  },
+  {
+    "id": "2026-07-04-poll-prerelease",
+    "kind": "poll",
+    "priority": 3,
+    "text": "Pitch Black prereleases start July 4 — are you heading to a local game store? 🎴",
+    "options": ["Going to prerelease", "Waiting for retail", "Both", "Just buying sealed"],
+    "postAfter": "2026-07-04T00:00:00Z",
+    "expires": "2026-07-14T00:00:00Z"
+  },
+  {
+    "id": "2026-07-10-sir-engagement",
+    "kind": "text",
+    "priority": 3,
+    "text": "6 Special Illustration Rares confirmed in Pitch Black 🎨 SIRs have been the most-hunted cards of the Mega Evolution era — do you crack packs chasing them, or buy singles? #PokemonTCG #PitchBlack",
+    "postAfter": "2026-07-10T00:00:00Z"
+  }
+]
