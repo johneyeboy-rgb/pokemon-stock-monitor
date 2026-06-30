@@ -34,43 +34,50 @@ const DRY_RUN = !!process.env.DRY_RUN;
 
 /**
  * Main entry: check all enabled retailers for the given products.
+ *
+ * Each enabled retailer is a separate host with its own rate limit, so there's
+ * no politeness reason to serialize *across* retailers — only within one
+ * retailer's own product loop (handled by checkRetailerProducts' delayMs sleep).
+ * Running retailers concurrently turns total wall time from
+ * sum(all retailers) into roughly max(slowest retailer), the single biggest
+ * lever for keeping a full pass under the 5-minute cron interval.
  * @param {string[]} products - product names to watch
  * @returns {Promise<object[]>}
  */
 export async function checkAllRetailers(products) {
   const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
-  const results = [];
 
   try {
-    for (const [name, retailer] of Object.entries(retailers.SITES)) {
-      if (!retailer.enabled) continue;
-      console.log(`[${name}] Checking ${products.length} product(s)...`);
+    const activeSites = Object.entries(retailers.SITES).filter(([, r]) => r.enabled);
+    const settled = await Promise.allSettled(
+      activeSites.map(([name, retailer]) => checkRetailerProducts(browser, name, retailer, products))
+    );
 
-      for (const product of products) {
-        try {
-          const result = await checkRetailer(browser, name, retailer, product);
-          results.push(result);
-          console.log(`[${name}] ${product}: ${result.inStock ? '✅ IN STOCK' : '❌ out of stock'}`);
-        } catch (err) {
-          console.error(`[${name}] Error checking "${product}":`, err.message);
-          results.push({ retailer: name, product, inStock: false, error: err.message });
-        }
-
-        // Polite delay between requests
-        await sleep(retailer.delayMs ?? 2000);
+    const results = [];
+    settled.forEach((outcome, i) => {
+      const [name] = activeSites[i];
+      if (outcome.status === 'fulfilled') {
+        results.push(...outcome.value);
+      } else {
+        console.error(`[${name}] Retailer check failed entirely:`, outcome.reason?.message ?? outcome.reason);
       }
-    }
+    });
+    return results;
   } finally {
     await browser.close();
   }
-
-  return results;
 }
 
 /**
- * Check a single retailer for a single product.
+ * Check every watched product at a single retailer, reusing one browser
+ * context (and one page, navigated sequentially) for the whole pass. Reusing
+ * the context avoids paying connection/TLS + context-init overhead on every
+ * single product, and lets cookies persist across requests within the
+ * retailer — which reads as more "human" than a fresh incognito identity per
+ * search (a churn pattern bot detection specifically looks for).
  */
-async function checkRetailer(browser, name, retailer, product) {
+async function checkRetailerProducts(browser, name, retailer, products) {
+  console.log(`[${name}] Checking ${products.length} product(s)...`);
   const context = await browser.newContext({
     userAgent: retailer.userAgent ?? DEFAULT_UA,
     extraHTTPHeaders: retailer.headers ?? {},
@@ -80,65 +87,86 @@ async function checkRetailer(browser, name, retailer, product) {
     deviceScaleFactor: 1,
   });
 
+  const results = [];
   try {
     const page = await context.newPage();
+    // Block fonts only (keep images so we can grab product photos).
+    await page.route('**/*.{woff,woff2,ttf,otf}', r => r.abort());
 
-    // Block images/fonts to speed up loading
-    await page.route('**/*.{woff,woff2,ttf,otf}', r => r.abort()); // block fonts only (keep images so we can grab product photos)
+    for (const product of products) {
+      try {
+        const result = await checkProduct(page, name, retailer, product);
+        results.push(result);
+        console.log(`[${name}] ${product}: ${result.inStock ? '✅ IN STOCK' : '❌ out of stock'}`);
+      } catch (err) {
+        console.error(`[${name}] Error checking "${product}":`, err.message);
+        results.push({ retailer: name, product, inStock: false, error: err.message });
+      }
 
-    const url = retailer.buildSearchUrl(product);
-    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
-
-    // Give JS-rendered pages a moment to settle
-    if (retailer.waitSelector) {
-      await page.waitForSelector(retailer.waitSelector, { timeout: 8000 }).catch(() => {});
-    } else {
-      await page.waitForTimeout(1500);
+      // Polite delay between requests to the same retailer.
+      await sleep(retailer.delayMs ?? 2000);
     }
-
-    // Dry-run diagnostics: did the page load, or did we hit a bot wall?
-    // status 403/429 or a "Just a moment…" / "Access Denied" title = blocked.
-    if (DRY_RUN) {
-      const title = await page.title().catch(() => '');
-      const cards = retailer.productCardSelector
-        ? (await page.$$(retailer.productCardSelector)).length
-        : 0;
-      console.log(`   [diag] status=${response?.status() ?? '?'} cards=${cards} title="${title.slice(0, 70)}"`);
-    }
-
-    // Match the product, detect stock, and grab the link — all in one in-page pass.
-    const found = await page.evaluate(scanForProduct, {
-      cardSel: retailer.productCardSelector,
-      titleSel: retailer.titleSelector ?? null,
-      linkSel: retailer.linkSelector ?? null,
-      priceSel: retailer.priceSelector ?? null,
-      imageSel: retailer.imageSelector ?? null,
-      excludeRe: retailer.excludePattern ?? null,
-      inSel: retailer.cardSelectors?.inStock ?? [],
-      outSel: retailer.cardSelectors?.outOfStock ?? [],
-      product,
-      threshold: MATCH_THRESHOLD,
-      stopwords: [...STOPWORDS],
-      baseUrl: retailer.baseUrl,
-    }).catch(() => null);
-
-    if (!found || !found.matched) {
-      // Product not present in the search results → treat as not in stock.
-      return { retailer: name, product, inStock: false, price: null, image: null, url };
-    }
-    if (DRY_RUN) console.log(`   [img] ${found.image ?? '(none)'}`);
-
-    // Fall back to Claude on the matched card's text if the markup was inconclusive.
-    let inStock = found.inStock; // true | false | null
-    if (inStock === null) {
-      inStock = await detectByAI(found.text, product, name);
-    }
-
-    const stockUrl = inStock ? (found.href ?? url) : url;
-    return { retailer: name, product, inStock, price: found.price ?? null, image: found.image ?? null, url: stockUrl };
   } finally {
     await context.close();
   }
+  return results;
+}
+
+/**
+ * Check a single product on an already-open page (navigates the page to the
+ * retailer's search URL for this product).
+ */
+async function checkProduct(page, name, retailer, product) {
+  const url = retailer.buildSearchUrl(product);
+  const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+
+  // Give JS-rendered pages a moment to settle
+  if (retailer.waitSelector) {
+    await page.waitForSelector(retailer.waitSelector, { timeout: 8000 }).catch(() => {});
+  } else {
+    await page.waitForTimeout(1500);
+  }
+
+  // Dry-run diagnostics: did the page load, or did we hit a bot wall?
+  // status 403/429 or a "Just a moment…" / "Access Denied" title = blocked.
+  if (DRY_RUN) {
+    const title = await page.title().catch(() => '');
+    const cards = retailer.productCardSelector
+      ? (await page.$$(retailer.productCardSelector)).length
+      : 0;
+    console.log(`   [diag] status=${response?.status() ?? '?'} cards=${cards} title="${title.slice(0, 70)}"`);
+  }
+
+  // Match the product, detect stock, and grab the link — all in one in-page pass.
+  const found = await page.evaluate(scanForProduct, {
+    cardSel: retailer.productCardSelector,
+    titleSel: retailer.titleSelector ?? null,
+    linkSel: retailer.linkSelector ?? null,
+    priceSel: retailer.priceSelector ?? null,
+    imageSel: retailer.imageSelector ?? null,
+    excludeRe: retailer.excludePattern ?? null,
+    inSel: retailer.cardSelectors?.inStock ?? [],
+    outSel: retailer.cardSelectors?.outOfStock ?? [],
+    product,
+    threshold: MATCH_THRESHOLD,
+    stopwords: [...STOPWORDS],
+    baseUrl: retailer.baseUrl,
+  }).catch(() => null);
+
+  if (!found || !found.matched) {
+    // Product not present in the search results → treat as not in stock.
+    return { retailer: name, product, inStock: false, price: null, image: null, url };
+  }
+  if (DRY_RUN) console.log(`   [img] ${found.image ?? '(none)'}`);
+
+  // Fall back to Claude on the matched card's text if the markup was inconclusive.
+  let inStock = found.inStock; // true | false | null
+  if (inStock === null) {
+    inStock = await detectByAI(found.text, product, name);
+  }
+
+  const stockUrl = inStock ? (found.href ?? url) : url;
+  return { retailer: name, product, inStock, price: found.price ?? null, image: found.image ?? null, url: stockUrl };
 }
 
 /**
