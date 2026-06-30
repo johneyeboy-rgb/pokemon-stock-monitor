@@ -1,7 +1,17 @@
 [
   { "name": "Pokemon 151 Booster Bundle", "msrp": 29.99 },
-  { "name": "Pokemon Crown Zenith Elite Trainer Box", "msrp": 49.99 },
-  { "name": "Pokemon Pitch Black Elite Trainer Box", "msrp": 49.99 },
+  { "name": "Pokemon Mega Evolution Elite Trainer Box", "msrp": 49.99 },
+  { "name": "Pokemon Mega Evolution Booster Bundle", "msrp": 26.94 },
+  { "name": "Pokemon Phantasmal Flames Elite Trainer Box", "msrp": 49.99 },
+  { "name": "Pokemon Phantasmal Flames Booster Bundle", "msrp": 26.94 },
+  { "name": "Pokemon Ascended Heroes Elite Trainer Box", "msrp": 54.99 },
+  { "name": "Pokemon Ascended Heroes Booster Bundle", "msrp": 25.00 },
+  { "name": "Pokemon Perfect Order Elite Trainer Box", "msrp": 49.99 },
+  { "name": "Pokemon Perfect Order Booster Bundle", "msrp": 26.94 },
+  { "name": "Pokemon Chaos Rising Elite Trainer Box", "msrp": 49.99 },
+  { "name": "Pokemon Chaos Rising Booster Bundle", "msrp": 26.94 },
+  { "name": "Pokemon Pitch Black Elite Trainer Box", "msrp": 59.99 },
   { "name": "Pokemon Pitch Black Booster Bundle", "msrp": 26.94 },
-  { "name": "Pokemon Mega Greninja ex Premium Collection", "msrp": 39.99 }
+  { "name": "Pokemon Mega Greninja ex Premium Collection", "msrp": 39.99 },
+  { "name": "Pokemon 30th Celebration Elite Trainer Box", "msrp": 49.99 }
 ]
