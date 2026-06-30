@@ -56,7 +56,8 @@ const MAX_MARKUP = 1.4;
 const MAX_FLAT_PREMIUM = 10;
 // Reject prices suspiciously below MSRP — signals a wrong-product match
 // (e.g. a single booster pack matched instead of a 6-pack bundle).
-const MIN_PRICE_RATIO = 0.6;
+// 0.75 = must be at least 75% of MSRP. Pokemon retail never discounts that deep.
+const MIN_PRICE_RATIO = 0.75;
 const msrpByName = new Map(WATCHED_PRODUCTS.map(p => [p.name, p.msrp]));
 
 // ── Run the agent loop ──────────────────────────────────────────────────────

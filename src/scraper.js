@@ -149,6 +149,7 @@ async function checkRetailer(browser, name, retailer, product) {
 function scanForProduct({ cardSel, titleSel, linkSel, priceSel, imageSel, excludeRe, inSel, outSel, product, threshold, stopwords, baseUrl }) {
   const stop = new Set(stopwords);
   const tokenize = s => (s || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // é→e so "Pokémon"→"pokemon"
     .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9\s]/g, ' ')
@@ -284,9 +285,11 @@ async function detectByAI(cardText, product, retailerName) {
 // ── Product-name matching ────────────────────────────────────────────────────
 
 // Fraction of the product's significant tokens a card title must contain to count
-// as the same product. Set high so near-misses are rejected — e.g. a search for
-// "151 Booster Bundle" should NOT match a "151 Booster Pack" listing (0.75).
-const MATCH_THRESHOLD = 0.8;
+// as the same product. At 0.85, a 5-token product requires all 5 to match
+// (ceil(5×0.85)=5) — so "Chaos Rising Booster Bundle" cannot match a listing
+// missing "bundle", and "Pokémon" now normalizes to "pokemon" so that token
+// participates in scoring instead of silently missing.
+const MATCH_THRESHOLD = 0.85;
 const STOPWORDS = new Set(['the', 'a', 'an', 'of', 'and', 'for', 'with', 'to']);
 
 const DEFAULT_UA =
