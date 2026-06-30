@@ -22,6 +22,19 @@ posts must carry dates (see step 4).
 Gather material in these buckets. **Every factual claim needs a credible source**
 (official Pokemon channels, major retailers, reputable TCG news like Bulbapedia/
 Bulbanews/PokeBeach). If you can't verify it, don't post it.
+
+#### 2a. Product reveals — search first, every time (mandatory)
+Before drafting anything else, run a dedicated search for **recent Pokemon TCG product
+reveals and announcements** (last 7–14 days). Search for:
+- `Pokemon TCG new set revealed [current month/year]`
+- `Pokemon TCG product lineup announced [current month/year]`
+- `Pokemon TCG [upcoming set name] official reveal`
+
+Any confirmed reveal from the last two weeks counts as breaking news and gets a
+`priority: 1` post with immediate release (see dates rule below). Fetch the official
+source page (pokemon.com, PokeBeach, press.pokemon.com) to extract verified image URLs
+before drafting — reveals without images are not allowed at priority 1.
+
 - **Upcoming restocks / releases** — known Pokemon TCG set releases, retailer
   restock dates or drop events in the window.
 - **Pokemon Center drop window** — confirm the *current* typical day/time pattern
@@ -80,7 +93,12 @@ Include one when you can verify a public, high-quality image URL that matches th
 - Do not invent or guess image URLs. If you can't find a verified image, omit the field.
 
 ### 4. Dates & freshness (critical)
-- For anything time-sensitive, set `postAfter` so it fires near the relevant day
+- **`priority: 1` reveal posts ALWAYS use today's date as `postAfter`** — breaking
+  news is time-sensitive and must fire at the next available slot, not days from now.
+  Use the session's current date (from the `currentDate` context), formatted as
+  `"YYYY-MM-DDT00:00:00Z"`. Do not set `expires` on reveals unless the news has a
+  clear expiry (e.g. a limited-time pre-order window).
+- For anything else time-sensitive, set `postAfter` so it fires near the relevant day
   and `expires` so a stale reminder is never posted (e.g. a "drops Friday" post:
   `postAfter` Wed, `expires` Fri evening).
 - Evergreen-ish posts (polls, tips) can omit dates.
